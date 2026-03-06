@@ -2,7 +2,8 @@ const LOAN_UID_CANDIDATES = ['api::loan.loan'];
 const NEWS_UID_CANDIDATES = ['api::news-item.news-item', 'api::news.news-item', 'api::news.news'];
 
 const MAX_COLLECTION_ITEMS = Number(process.env.CONTENT_SEARCH_MAX_ITEMS || 1000);
-const MAX_POPULATE_DEPTH = Number(process.env.CONTENT_SEARCH_POPULATE_DEPTH || 4);
+const COLLECTION_POPULATE_DEPTH = Number(process.env.CONTENT_SEARCH_POPULATE_DEPTH || 4);
+const SINGLE_TYPE_POPULATE_DEPTH = Number(process.env.CONTENT_SEARCH_SINGLE_TYPE_POPULATE_DEPTH || 8);
 const POPULATE_RELATIONS_DEEPLY = process.env.CONTENT_SEARCH_POPULATE_RELATIONS === 'true';
 const SEARCH_CACHE_TTL_MS = Number(process.env.CONTENT_SEARCH_CACHE_TTL_MS || 30_000);
 const SEARCH_CONCURRENCY = Number(process.env.CONTENT_SEARCH_CONCURRENCY || 1);
@@ -10,6 +11,7 @@ const SEARCH_MAX_TEXT_LENGTH = Number(process.env.CONTENT_SEARCH_MAX_TEXT_LENGTH
 const SEARCH_FLATTEN_DEPTH = Number(process.env.CONTENT_SEARCH_FLATTEN_DEPTH || 20);
 const SEARCH_FLATTEN_NODES = Number(process.env.CONTENT_SEARCH_FLATTEN_NODES || 300_000);
 const UID_QUERY_TIMEOUT_MS = Number(process.env.CONTENT_SEARCH_UID_TIMEOUT_MS || 3000);
+const SINGLE_TYPE_UID_QUERY_TIMEOUT_MS = Number(process.env.CONTENT_SEARCH_SINGLE_TYPE_UID_TIMEOUT_MS || 6000);
 
 const populateCache = new Map();
 const responseCache = new Map();
@@ -257,9 +259,11 @@ const buildPopulateFromAttributes = (attributes, depth, strapi, visited) => {
   return Object.keys(populate).length ? populate : '*';
 };
 
-const buildPopulateForUid = (uid, strapi) => {
-  if (populateCache.has(uid)) {
-    return populateCache.get(uid);
+const buildPopulateForUid = (uid, strapi, kind) => {
+  const cacheKey = `${uid}:${kind || 'unknown'}`;
+
+  if (populateCache.has(cacheKey)) {
+    return populateCache.get(cacheKey);
   }
 
   const schema = strapi.contentTypes?.[uid];
@@ -267,20 +271,26 @@ const buildPopulateForUid = (uid, strapi) => {
     return '*';
   }
 
-  const populate = buildPopulateFromAttributes(schema.attributes, MAX_POPULATE_DEPTH, strapi, new Set());
-  populateCache.set(uid, populate);
+  const populateDepth = kind === 'singleType' ? SINGLE_TYPE_POPULATE_DEPTH : COLLECTION_POPULATE_DEPTH;
+  const populate = buildPopulateFromAttributes(schema.attributes, populateDepth, strapi, new Set());
+  populateCache.set(cacheKey, populate);
   return populate;
 };
 
 const fetchEntriesByUid = async (uid, kind, strapi, locale) => {
   const schema = strapi.contentTypes?.[uid];
   const query: any = {
-    populate: buildPopulateForUid(uid, strapi),
+    populate: buildPopulateForUid(uid, strapi, kind),
     limit: kind === 'singleType' ? 1 : MAX_COLLECTION_ITEMS,
   };
 
   if (schema?.pluginOptions?.i18n?.localized && locale) {
     query.locale = locale;
+  }
+
+  if (kind === 'singleType') {
+    const entityResult = await strapi.entityService.findMany(uid, query);
+    return normalizeEntries(entityResult);
   }
 
   try {
@@ -393,7 +403,8 @@ module.exports = {
       }
 
       try {
-        const entries = await withTimeout(fetchEntriesByUid(uid, schema.kind, strapi, locale), UID_QUERY_TIMEOUT_MS);
+        const timeoutMs = schema.kind === 'singleType' ? SINGLE_TYPE_UID_QUERY_TIMEOUT_MS : UID_QUERY_TIMEOUT_MS;
+        const entries = await withTimeout(fetchEntriesByUid(uid, schema.kind, strapi, locale), timeoutMs);
         return { uid, schema, entries };
       } catch (error) {
         strapi.log.warn(`[content-search] skipped ${uid}: ${String(error?.message || error)}`);
