@@ -93,15 +93,7 @@ const PAGE_CONTENT_POPULATE = {
                                   },
                                 },
                               },
-                              vacancyList: {
-                                populate: {
-                                  vacancies: {
-                                    populate: {
-                                      conent: true,
-                                    },
-                                  },
-                                },
-                              },
+                              vacancyList: true,
                               personList: {
                                 populate: {
                                   personItem: {
@@ -199,15 +191,7 @@ const PAGE_CONTENT_POPULATE = {
                           },
                         },
                       },
-                      vacancyList: {
-                        populate: {
-                          vacancies: {
-                            populate: {
-                              conent: true,
-                            },
-                          },
-                        },
-                      },
+                      vacancyList: true,
                       personList: {
                         populate: {
                           personItem: {
@@ -311,15 +295,7 @@ const PAGE_CONTENT_POPULATE = {
                       },
                     },
                   },
-                  vacancyList: {
-                    populate: {
-                      vacancies: {
-                        populate: {
-                          conent: true,
-                        },
-                      },
-                    },
-                  },
+                  vacancyList: true,
                   personList: {
                     populate: {
                       personItem: {
@@ -417,15 +393,7 @@ const PAGE_CONTENT_POPULATE = {
               },
             },
           },
-          vacancyList: {
-            populate: {
-              vacancies: {
-                populate: {
-                  conent: true,
-                },
-              },
-            },
-          },
+          vacancyList: true,
           personList: {
             populate: {
               personItem: {

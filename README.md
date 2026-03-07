@@ -32,6 +32,41 @@ npm run build
 yarn build
 ```
 
+## 🔎 Content search tuning
+
+`POST /api/content-search` supports locale-aware search and can be tuned for production performance via environment variables.
+
+### Recommended production defaults
+
+```env
+CONTENT_SEARCH_DATA_CACHE_TTL_MS=300000
+CONTENT_SEARCH_CONCURRENCY=1
+CONTENT_SEARCH_UID_TIMEOUT_MS=3000
+CONTENT_SEARCH_SINGLE_TYPE_UID_TIMEOUT_MS=6000
+CONTENT_SEARCH_MAX_ITEMS=1000
+CONTENT_SEARCH_POPULATE_DEPTH=4
+CONTENT_SEARCH_SINGLE_TYPE_POPULATE_DEPTH=8
+```
+
+### Variable reference
+
+- `CONTENT_SEARCH_DATA_CACHE_TTL_MS`: TTL for in-memory precomputed searchable dataset per locale. Higher values reduce DB load and improve repeated query latency.
+- `CONTENT_SEARCH_CONCURRENCY`: Number of content types scanned in parallel. Keep `1` unless DB pool headroom is confirmed.
+- `CONTENT_SEARCH_UID_TIMEOUT_MS`: Per-collection-type fetch timeout (ms).
+- `CONTENT_SEARCH_SINGLE_TYPE_UID_TIMEOUT_MS`: Per-single-type fetch timeout (ms).
+- `CONTENT_SEARCH_MAX_ITEMS`: Max collection records loaded per type during scan.
+- `CONTENT_SEARCH_POPULATE_DEPTH`: Populate depth for collection types.
+- `CONTENT_SEARCH_SINGLE_TYPE_POPULATE_DEPTH`: Populate depth for single types (used for deeply nested page content).
+
+### Request example
+
+```json
+{
+	"word": "Աշոտ",
+	"locale": "hy"
+}
+```
+
 ## ⚙️ Deployment
 
 Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.

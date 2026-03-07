@@ -35,11 +35,6 @@
       "component": "widget-list.widget-list",
       "repeatable": false
     },
-    "vacancyList": {
-      "type": "component",
-      "component": "vacancy-list.vacancy-list",
-      "repeatable": false
-    },
     "personList": {
       "type": "component",
       "component": "person-list.person-list",
@@ -64,6 +59,11 @@
       "type": "component",
       "component": "bullet-chain-list.bullet-chain-list",
       "repeatable": false
+    },
+    "vacancyList": {
+      "type": "component",
+      "component": "vacancy-item.vacancy-item",
+      "repeatable": true
     }
   },
   "config": {}

@@ -45,7 +45,7 @@ export interface CombinedContentCombinedContent extends Struct.ComponentSchema {
       'single-row-list.single-row-list',
       false
     >;
-    vacancyList: Schema.Attribute.Component<'vacancy-list.vacancy-list', false>;
+    vacancyList: Schema.Attribute.Component<'vacancy-item.vacancy-item', true>;
     widgetList: Schema.Attribute.Component<'widget-list.widget-list', false>;
   };
 }
@@ -111,6 +111,7 @@ export interface HeadingHeading extends Struct.ComponentSchema {
   attributes: {
     description: Schema.Attribute.Text;
     imageSrc: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    isTextCenter: Schema.Attribute.Boolean;
     title: Schema.Attribute.String;
   };
 }
@@ -282,23 +283,15 @@ export interface SingleRowSingleRow extends Struct.ComponentSchema {
   };
 }
 
-export interface VacancyListVacancyList extends Struct.ComponentSchema {
-  collectionName: 'components_vacancy_list_vacancy_lists';
+export interface VacancyItemVacancyItem extends Struct.ComponentSchema {
+  collectionName: 'components_vacancy_item_vacancy_items';
   info: {
-    displayName: 'vacancyList';
+    displayName: 'vacancyItem';
   };
   attributes: {
-    vacancies: Schema.Attribute.Component<'vacancy.vacancy', true>;
-  };
-}
-
-export interface VacancyVacancy extends Struct.ComponentSchema {
-  collectionName: 'components_vacancy_vacancies';
-  info: {
-    displayName: 'vacancy';
-  };
-  attributes: {
-    conent: Schema.Attribute.Component<'plain-text.plain-text', true>;
+    deadline: Schema.Attribute.Date;
+    description: Schema.Attribute.Blocks;
+    destination: Schema.Attribute.String;
     title: Schema.Attribute.String;
   };
 }
@@ -352,8 +345,7 @@ declare module '@strapi/strapi' {
       'section-list.section-list': SectionListSectionList;
       'single-row-list.single-row-list': SingleRowListSingleRowList;
       'single-row.single-row': SingleRowSingleRow;
-      'vacancy-list.vacancy-list': VacancyListVacancyList;
-      'vacancy.vacancy': VacancyVacancy;
+      'vacancy-item.vacancy-item': VacancyItemVacancyItem;
       'widget-list-item.widget-list-item': WidgetListItemWidgetListItem;
       'widget-list.widget-list': WidgetListWidgetList;
     }

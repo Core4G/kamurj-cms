@@ -12,9 +12,12 @@ const SEARCH_FLATTEN_DEPTH = Number(process.env.CONTENT_SEARCH_FLATTEN_DEPTH || 
 const SEARCH_FLATTEN_NODES = Number(process.env.CONTENT_SEARCH_FLATTEN_NODES || 300_000);
 const UID_QUERY_TIMEOUT_MS = Number(process.env.CONTENT_SEARCH_UID_TIMEOUT_MS || 3000);
 const SINGLE_TYPE_UID_QUERY_TIMEOUT_MS = Number(process.env.CONTENT_SEARCH_SINGLE_TYPE_UID_TIMEOUT_MS || 6000);
+const SEARCH_DATA_CACHE_TTL_MS = Number(process.env.CONTENT_SEARCH_DATA_CACHE_TTL_MS || 120_000);
 
 const populateCache = new Map();
 const responseCache = new Map();
+const searchDataCache = new Map();
+const searchDataCacheInFlight = new Map();
 
 const nowMs = () => Date.now();
 const normalizeForSearch = (value) => String(value || '').normalize('NFKC').toLowerCase();
@@ -91,6 +94,24 @@ const pageNameFromUid = (uid) => {
   const apiPart = uid.split('::')[1] || '';
   const contentTypeName = apiPart.split('.')[0] || apiPart;
   return toPascalCase(contentTypeName);
+};
+
+const pageDisplayNameFromSchema = (uid, schema) => {
+  const displayName = String(schema?.info?.displayName || '').trim();
+  if (displayName) {
+    return displayName;
+  }
+
+  return pageNameFromUid(uid);
+};
+
+const pageDisplayNameFromEntry = (entry, uid, schema) => {
+  const localizedDisplayName = String(entry?.display_name || entry?.displayName || '').trim();
+  if (localizedDisplayName) {
+    return localizedDisplayName;
+  }
+
+  return pageDisplayNameFromSchema(uid, schema);
 };
 
 const getEntryRef = (entry) => String(entry?.documentId || entry?.id || '');
@@ -372,9 +393,135 @@ const cleanupExpiredResponseCache = () => {
   }
 };
 
+const getCachedSearchData = (cacheKey) => {
+  const cached = searchDataCache.get(cacheKey);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= nowMs()) {
+    searchDataCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+};
+
+const setCachedSearchData = (cacheKey, data) => {
+  if (SEARCH_DATA_CACHE_TTL_MS <= 0) {
+    return;
+  }
+
+  searchDataCache.set(cacheKey, {
+    expiresAt: nowMs() + SEARCH_DATA_CACHE_TTL_MS,
+    data,
+  });
+};
+
+const cleanupExpiredSearchDataCache = () => {
+  const currentTime = nowMs();
+  for (const [key, cached] of searchDataCache.entries()) {
+    if (cached.expiresAt <= currentTime) {
+      searchDataCache.delete(key);
+    }
+  }
+};
+
+const buildSearchDataForLocale = async (strapi, locale) => {
+  const targetUids = getTargetUids(strapi);
+  const loanUid = resolveCollectionUid(strapi, LOAN_UID_CANDIDATES, 'loan');
+  const newsUid = resolveCollectionUid(strapi, NEWS_UID_CANDIDATES, 'news-item');
+
+  const scanResults = await runWithConcurrency(targetUids, async (uid) => {
+    const schema = strapi.contentTypes?.[uid];
+    if (!schema) {
+      return { uid, schema: null, entries: [] };
+    }
+
+    try {
+      const timeoutMs = schema.kind === 'singleType' ? SINGLE_TYPE_UID_QUERY_TIMEOUT_MS : UID_QUERY_TIMEOUT_MS;
+      const entries = await withTimeout(fetchEntriesByUid(uid, schema.kind, strapi, locale), timeoutMs);
+      return { uid, schema, entries };
+    } catch (error) {
+      strapi.log.warn(`[content-search] skipped ${uid}: ${String(error?.message || error)}`);
+      return { uid, schema, entries: [] };
+    }
+  });
+
+  const rows = [];
+
+  for (const result of scanResults) {
+    const schema = result?.schema;
+    if (!schema || !Array.isArray(result.entries) || !result.entries.length) {
+      continue;
+    }
+
+    for (const entry of result.entries) {
+      const searchableText = [getDirectSearchText(entry), flattenSearchText(entry)].filter(Boolean).join(' ');
+      if (!searchableText) {
+        continue;
+      }
+
+      if (loanUid && result.uid === loanUid) {
+        const id = String(entry?.documentId || entry?.id || '');
+        if (!id) {
+          continue;
+        }
+        rows.push({ type: 'loan', searchableText, id, name: getLoanName(entry) });
+        continue;
+      }
+
+      if (newsUid && result.uid === newsUid) {
+        const id = String(entry?.documentId || entry?.id || '');
+        if (!id) {
+          continue;
+        }
+        rows.push({ type: 'news', searchableText, id, name: getNewsName(entry) });
+        continue;
+      }
+
+      if (schema.kind === 'singleType') {
+        rows.push({
+          type: 'page',
+          searchableText,
+          pageName: pageNameFromUid(result.uid),
+          displayName: pageDisplayNameFromEntry(entry, result.uid, schema),
+        });
+      }
+    }
+  }
+
+  return rows;
+};
+
+const getSearchDataForLocale = async (strapi, locale) => {
+  const localeCacheKey = locale || '__default__';
+  const cachedData = getCachedSearchData(localeCacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  if (searchDataCacheInFlight.has(localeCacheKey)) {
+    return searchDataCacheInFlight.get(localeCacheKey);
+  }
+
+  const inFlight = buildSearchDataForLocale(strapi, locale)
+    .then((rows) => {
+      setCachedSearchData(localeCacheKey, rows);
+      return rows;
+    })
+    .finally(() => {
+      searchDataCacheInFlight.delete(localeCacheKey);
+    });
+
+  searchDataCacheInFlight.set(localeCacheKey, inFlight);
+  return inFlight;
+};
+
 module.exports = {
   async search(ctx) {
     cleanupExpiredResponseCache();
+    cleanupExpiredSearchDataCache();
 
     const rawWord = String(ctx.request.body?.word || '').trim();
     const locale = normalizeLocale(ctx.request.body?.locale || ctx.query?.locale);
@@ -392,62 +539,38 @@ module.exports = {
       return cached;
     }
 
-    const targetUids = getTargetUids(strapi);
-    const loanUid = resolveCollectionUid(strapi, LOAN_UID_CANDIDATES, 'loan');
-    const newsUid = resolveCollectionUid(strapi, NEWS_UID_CANDIDATES, 'news-item');
+    const searchDataRows = await getSearchDataForLocale(strapi, locale);
 
-    const scanResults = await runWithConcurrency(targetUids, async (uid) => {
-      const schema = strapi.contentTypes?.[uid];
-      if (!schema) {
-        return { uid, schema: null, entries: [] };
-      }
-
-      try {
-        const timeoutMs = schema.kind === 'singleType' ? SINGLE_TYPE_UID_QUERY_TIMEOUT_MS : UID_QUERY_TIMEOUT_MS;
-        const entries = await withTimeout(fetchEntriesByUid(uid, schema.kind, strapi, locale), timeoutMs);
-        return { uid, schema, entries };
-      } catch (error) {
-        strapi.log.warn(`[content-search] skipped ${uid}: ${String(error?.message || error)}`);
-        return { uid, schema, entries: [] };
-      }
-    });
-
-    const foundPages = new Set();
+    const foundPages = new Map();
     const foundLoans = new Map();
     const foundNews = new Map();
 
-    for (const result of scanResults) {
-      const schema = result?.schema;
-      if (!schema || !Array.isArray(result.entries) || !result.entries.length) {
+    for (const row of searchDataRows) {
+      if (!row?.searchableText || !row.searchableText.includes(searchWord)) {
         continue;
       }
 
-      for (const entry of result.entries) {
-        const searchableText = [getDirectSearchText(entry), flattenSearchText(entry)].filter(Boolean).join(' ');
-        if (!searchableText || !searchableText.includes(searchWord)) {
+      if (row.type === 'loan') {
+        foundLoans.set(row.id, { id: row.id, name: row.name });
+        continue;
+      }
+
+      if (row.type === 'news') {
+        foundNews.set(row.id, { id: row.id, name: row.name });
+        continue;
+      }
+
+      if (row.type === 'page') {
+        const pageName = String(row.pageName || '');
+        if (!pageName) {
           continue;
         }
 
-        if (loanUid && result.uid === loanUid) {
-          const id = String(entry?.documentId || entry?.id || '');
-          if (!id) {
-            continue;
-          }
-          foundLoans.set(id, { id, name: getLoanName(entry) });
-          continue;
-        }
-
-        if (newsUid && result.uid === newsUid) {
-          const id = String(entry?.documentId || entry?.id || '');
-          if (!id) {
-            continue;
-          }
-          foundNews.set(id, { id, name: getNewsName(entry) });
-          continue;
-        }
-
-        if (schema.kind === 'singleType') {
-          foundPages.add(pageNameFromUid(result.uid));
+        if (!foundPages.has(pageName)) {
+          foundPages.set(pageName, {
+            pageName,
+            displayName: String(row.displayName || pageName),
+          });
         }
       }
     }
@@ -456,7 +579,7 @@ module.exports = {
       word: rawWord,
       ...(locale ? { locale } : {}),
       foundIn: {
-        pages: Array.from(foundPages),
+        pages: Array.from(foundPages.values()),
         loans: Array.from(foundLoans.values()),
         news: Array.from(foundNews.values()),
       },

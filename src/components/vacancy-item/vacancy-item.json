@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_vacancy_item_vacancy_items",
+  "info": {
+    "displayName": "vacancyItem"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "destination": {
+      "type": "string"
+    },
+    "deadline": {
+      "type": "date"
+    }
+  },
+  "config": {}
+}

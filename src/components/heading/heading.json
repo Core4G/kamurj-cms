@@ -20,6 +20,9 @@
         "videos",
         "audios"
       ]
+    },
+    "isTextCenter": {
+      "type": "boolean"
     }
   },
   "config": {}
