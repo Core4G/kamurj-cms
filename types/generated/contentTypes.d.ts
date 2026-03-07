@@ -1855,6 +1855,46 @@ export interface ApiStakeHolderPageStakeHolderPage
   };
 }
 
+export interface ApiVacancyApplicationVacancyApplication
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'vacancy_applications';
+  info: {
+    displayName: 'VacancyApplication';
+    pluralName: 'vacancy-applications';
+    singularName: 'vacancy-application';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    appliedFor: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios'
+    >;
+    comments: Schema.Attribute.Text;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    cv: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    email: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::vacancy-application.vacancy-application'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String;
+    phone: Schema.Attribute.String;
+    processed: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    publishedAt: Schema.Attribute.DateTime;
+    surname: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiVacancyPageVacancyPage extends Struct.SingleTypeSchema {
   collectionName: 'vacancy_pages';
   info: {
@@ -2441,6 +2481,7 @@ declare module '@strapi/strapi' {
       'api::reports-page.reports-page': ApiReportsPageReportsPage;
       'api::site-map-page.site-map-page': ApiSiteMapPageSiteMapPage;
       'api::stake-holder-page.stake-holder-page': ApiStakeHolderPageStakeHolderPage;
+      'api::vacancy-application.vacancy-application': ApiVacancyApplicationVacancyApplication;
       'api::vacancy-page.vacancy-page': ApiVacancyPageVacancyPage;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

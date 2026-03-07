@@ -93,7 +93,11 @@ const PAGE_CONTENT_POPULATE = {
                                   },
                                 },
                               },
-                              vacancyList: true,
+                              vacancyList: {
+                                populate: {
+                                  jobDescription: true,
+                                },
+                              },
                               personList: {
                                 populate: {
                                   personItem: {
@@ -191,7 +195,11 @@ const PAGE_CONTENT_POPULATE = {
                           },
                         },
                       },
-                      vacancyList: true,
+                      vacancyList: {
+                        populate: {
+                          jobDescription: true,
+                        },
+                      },
                       personList: {
                         populate: {
                           personItem: {
@@ -295,7 +303,11 @@ const PAGE_CONTENT_POPULATE = {
                       },
                     },
                   },
-                  vacancyList: true,
+                  vacancyList: {
+                    populate: {
+                      jobDescription: true,
+                    },
+                  },
                   personList: {
                     populate: {
                       personItem: {
@@ -393,7 +405,11 @@ const PAGE_CONTENT_POPULATE = {
               },
             },
           },
-          vacancyList: true,
+          vacancyList: {
+            populate: {
+              jobDescription: true,
+            },
+          },
           personList: {
             populate: {
               personItem: {

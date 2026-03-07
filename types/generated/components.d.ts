@@ -290,8 +290,11 @@ export interface VacancyItemVacancyItem extends Struct.ComponentSchema {
   };
   attributes: {
     deadline: Schema.Attribute.Date;
-    description: Schema.Attribute.Blocks;
     destination: Schema.Attribute.String;
+    jobDescription: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios'
+    > &
+      Schema.Attribute.Required;
     title: Schema.Attribute.String;
   };
 }

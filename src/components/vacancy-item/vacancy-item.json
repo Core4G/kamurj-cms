@@ -8,8 +8,16 @@
     "title": {
       "type": "string"
     },
-    "description": {
-      "type": "blocks"
+    "jobDescription": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
     },
     "destination": {
       "type": "string"

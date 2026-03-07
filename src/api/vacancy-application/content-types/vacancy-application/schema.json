@@ -1,0 +1,55 @@
+{
+  "kind": "collectionType",
+  "collectionName": "vacancy_applications",
+  "info": {
+    "singularName": "vacancy-application",
+    "pluralName": "vacancy-applications",
+    "displayName": "VacancyApplication"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "surname": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "processed": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    },
+    "comments": {
+      "type": "text"
+    },
+    "cv": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "appliedFor": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    }
+  }
+}
