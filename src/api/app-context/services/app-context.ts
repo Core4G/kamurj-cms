@@ -638,7 +638,9 @@ const HOME_PAGE_POPULATE = {
     },
   },
   exchange_rates: true,
-  gold_rates: true,
+  gold_rates: {
+    sort: ['purity:desc'],
+  },
 };
 
 const isValidPageName = (pageName: string) => /^[a-z0-9-]+$/.test(pageName);
@@ -843,7 +845,7 @@ module.exports = {
       const exchangeCurrenciesGold = await strapi.entityService.findMany(
         "api::gold-rate.gold-rate",
         {
-          sort: { id: "asc" },
+          sort: { purity: "desc" },
         }
       );
       

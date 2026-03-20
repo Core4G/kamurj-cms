@@ -43,6 +43,15 @@
       "required": true,
       "default": false
     },
+    "isApplicableLoan": {
+      "type": "boolean",
+      "pluginOptions": {
+        "i18n": {
+          "localized": false
+        }
+      },
+      "default": true
+    },
     "widgetImageSrc": {
       "type": "media",
       "pluginOptions": {

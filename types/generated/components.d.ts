@@ -136,6 +136,7 @@ export interface LoanCurrencyLoanCurrency extends Struct.ComponentSchema {
     minInterestRate: Schema.Attribute.Decimal;
     minValue: Schema.Attribute.BigInteger;
     name: Schema.Attribute.String & Schema.Attribute.Required;
+    serviceFee: Schema.Attribute.Decimal;
     strictInterestRate: Schema.Attribute.Decimal;
   };
 }

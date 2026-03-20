@@ -1485,6 +1485,13 @@ export interface ApiLoanLoan extends Struct.CollectionTypeSchema {
           localized: false;
         };
       }>;
+    isApplicableLoan: Schema.Attribute.Boolean &
+      Schema.Attribute.SetPluginOptions<{
+        i18n: {
+          localized: false;
+        };
+      }> &
+      Schema.Attribute.DefaultTo<true>;
     isTopLoan: Schema.Attribute.Boolean &
       Schema.Attribute.Required &
       Schema.Attribute.SetPluginOptions<{

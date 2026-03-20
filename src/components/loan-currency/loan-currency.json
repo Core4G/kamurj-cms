@@ -24,6 +24,9 @@
     "actualMaxRate": {
       "type": "decimal"
     },
+    "serviceFee": {
+      "type": "decimal"
+    },
     "minDuration": {
       "type": "biginteger"
     },
